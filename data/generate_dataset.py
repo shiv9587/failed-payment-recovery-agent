@@ -1,16 +1,3 @@
-"""
-Generates a synthetic batch of failed payment transactions for the
-Failed Payment Recovery Agent (Razorpay AI Buildathon - Track 3).
-
-Failure reason codes are based on real Razorpay documentation
-(see failure_codes.md in this folder) with a realistic distribution:
-most failures are recoverable (insufficient funds, OTP, network),
-a smaller share are compliance-blocked (fraud, wrong account).
-
-Usage:
-    python generate_dataset.py --rows 200 --seed 42
-"""
-
 import argparse
 import csv
 import random
@@ -41,13 +28,16 @@ def weighted_choice(profiles):
     return random.choices(reasons, weights=weights, k=1)[0]
 
 
-def generate_row(customer_ids, base_time):
+def generate_row(customer_ids, customer_contacts, base_time):
     reason = weighted_choice(FAILURE_PROFILES)
     _, source, method_pool = FAILURE_PROFILES[reason]
     method = random.choice(method_pool)
 
     amount = round(random.uniform(149, 24999), 2)
-    customer_id = random.choice(customer_ids)
+    customer_idx = random.randint(0, len(customer_ids) - 1)
+    customer_id = customer_ids[customer_idx]
+    customer_contact = customer_contacts[customer_idx]
+
     txn_time = base_time - timedelta(
         days=random.randint(0, 6),
         hours=random.randint(0, 23),
@@ -57,6 +47,8 @@ def generate_row(customer_ids, base_time):
     return {
         "transaction_id": f"txn_{uuid.uuid4().hex[:14]}",
         "customer_id": customer_id,
+        "customer_contact": customer_contact,
+        "customer_name": f"Customer_{customer_id[-4:]}",
         "amount": amount,
         "payment_method": method,
         "failure_reason": reason,
@@ -75,9 +67,13 @@ def main():
 
     random.seed(args.seed)
     customer_ids = [f"cust_{uuid.uuid4().hex[:8]}" for _ in range(CUSTOMER_POOL_SIZE)]
+    
+    # FIX: Generates realistic 10-digit mobile numbers without continuous zero/digit repetitions
+    customer_contacts = [f"+919876{random.randint(100000, 999999)}" for _ in range(CUSTOMER_POOL_SIZE)]
+
     base_time = datetime.now()
 
-    rows = [generate_row(customer_ids, base_time) for _ in range(args.rows)]
+    rows = [generate_row(customer_ids, customer_contacts, base_time) for _ in range(args.rows)]
     rows.sort(key=lambda r: r["timestamp"])
 
     fieldnames = list(rows[0].keys())
