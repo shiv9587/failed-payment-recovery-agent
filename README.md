@@ -104,7 +104,7 @@ Were Blocked" panel for the live breakdown on any given run.
 
 ## Live dashboard
 
-[Add your Streamlit Community Cloud URL here once deployed]
+https://failed-payment-recovery-agent.streamlit.app/
 
 ## Notes for reviewers
 
